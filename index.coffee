@@ -4,13 +4,15 @@ class SmartTest
     clientChannel: '/client'
     serverChannel: '/server'
     verbose: true
+    viewportWidth: 1024
+    viewportHeight: 768
 
   constructor: (options) ->
     @options = $.extend({}, @defaults, options)
 
     @$logEl = $('#log-output')
-    @canvas = document.getElementById('phantom-canvas')
-    @canvasCtx = @canvas.getContext('2d')
+    @$canvas = $('#phantom-canvas')
+    @canvasCtx = @$canvas[0].getContext('2d')
     @fayeClient = new Faye.Client(@options.fayeUri)
     @fayeClient.subscribe(@options.serverChannel, @_repaint)
 
@@ -24,10 +26,12 @@ class SmartTest
 
   recordTest: () =>
     @_clearLog()
+    @$canvas.prop('width', @options.viewportWidth).prop('height', @options.viewportHeight)
     @_log('Recording new test')
     @testEvents = []
 
     @_publishMessage({type: 'startRecord'})
+    @_publishMessage({type: 'setViewport', viewportTop: 0, viewportLeft: 0, viewportWidth: @options.viewportWidth, viewportHeight: @options.viewportHeight})
     uri = $('#uri').val()
     @_publishRecordMessage({type: 'goto', uri: uri}) if (uri? and uri isnt '')
     @_bindRecordEvents()
@@ -40,7 +44,7 @@ class SmartTest
   _repaint: (message) =>
     image = new Image()
     image.onload = () =>
-      @canvasCtx.clearRect(0, 0, 800, 600)
+      @canvasCtx.clearRect(0, 0, @options.viewportWidth, @options.viewportHeight)
       @canvasCtx.drawImage(image, 0, 0)
     image.src = message.image
 
@@ -74,7 +78,7 @@ class SmartTest
 
   _unbindRecordEvents: () ->
     $(document).off('keydown keypress keyup')
-    $('#phantom-canvas').on('click')
+    $('#phantom-canvas').off('click')
     $('#stop-record').off('click')
     $('#start-record').prop('disabled', false)
     $('#start-record').on('click', @recordTest)

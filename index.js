@@ -8,7 +8,9 @@
       fayeUri: 'http://192.168.10.10:9292/faye',
       clientChannel: '/client',
       serverChannel: '/server',
-      verbose: true
+      verbose: true,
+      viewportWidth: 1024,
+      viewportHeight: 768
     };
 
     function SmartTest(options) {
@@ -18,8 +20,8 @@
       var _this = this;
       this.options = $.extend({}, this.defaults, options);
       this.$logEl = $('#log-output');
-      this.canvas = document.getElementById('phantom-canvas');
-      this.canvasCtx = this.canvas.getContext('2d');
+      this.$canvas = $('#phantom-canvas');
+      this.canvasCtx = this.$canvas[0].getContext('2d');
       this.fayeClient = new Faye.Client(this.options.fayeUri);
       this.fayeClient.subscribe(this.options.serverChannel, this._repaint);
       $('#test-input').on('keydown keypress keyup', function(e) {
@@ -35,10 +37,18 @@
     SmartTest.prototype.recordTest = function() {
       var uri;
       this._clearLog();
+      this.$canvas.prop('width', this.options.viewportWidth).prop('height', this.options.viewportHeight);
       this._log('Recording new test');
       this.testEvents = [];
       this._publishMessage({
         type: 'startRecord'
+      });
+      this._publishMessage({
+        type: 'setViewport',
+        viewportTop: 0,
+        viewportLeft: 0,
+        viewportWidth: this.options.viewportWidth,
+        viewportHeight: this.options.viewportHeight
       });
       uri = $('#uri').val();
       if ((uri != null) && uri !== '') {
@@ -64,7 +74,7 @@
         _this = this;
       image = new Image();
       image.onload = function() {
-        _this.canvasCtx.clearRect(0, 0, 800, 600);
+        _this.canvasCtx.clearRect(0, 0, _this.options.viewportWidth, _this.options.viewportHeight);
         return _this.canvasCtx.drawImage(image, 0, 0);
       };
       return image.src = message.image;
@@ -120,7 +130,7 @@
 
     SmartTest.prototype._unbindRecordEvents = function() {
       $(document).off('keydown keypress keyup');
-      $('#phantom-canvas').on('click');
+      $('#phantom-canvas').off('click');
       $('#stop-record').off('click');
       $('#start-record').prop('disabled', false);
       $('#start-record').on('click', this.recordTest);

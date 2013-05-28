@@ -20,6 +20,11 @@ function receiveMessage(message) {
       page = webpage.create();
       bindPageEvents();
       break;
+    case 'setViewport':
+      page.viewportSize = { width: message.viewportWidth, height: message.viewportHeight };
+      page.clipRect = { top: message.viewportTop, left: message.viewportLeft, width: message.viewportWidth, height: message.viewportHeight };
+      page.zoomFactor = 1.0;
+      break;
     case 'stopRecord':
       sendingUpdates = false;
       if (page) {
@@ -35,8 +40,6 @@ function receiveMessage(message) {
       break;
 
     case 'goto':
-      page.viewportSize = { width: 800, height: 600 };
-      page.clipRect = { top: 0, left: 0, width: 800, height: 600 };
       page.open(message.uri, function (status) {
         if (status !== 'success') {
           console.log('Unable to load the address!');
