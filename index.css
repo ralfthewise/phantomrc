@@ -1,0 +1,26 @@
+.canvas-container {
+  display: inline;
+  float: left;
+  margin: 20px;
+}
+
+.test-steps-container {
+  margin: 20px;
+}
+
+.clearfix {
+  *zoom: 1;
+}
+.clearfix:before, .clearfix:after {
+  display: table;
+  content: "";
+  line-height: 0;
+}
+.clearfix:after {
+  clear: both;
+}
+
+#log-output {
+  max-height: 400px;
+  overflow: auto;
+}
