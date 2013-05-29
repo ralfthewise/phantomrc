@@ -14,16 +14,22 @@
     };
 
     function SmartTest(options) {
+      this._clickComponents = __bind(this._clickComponents, this);
+      this._updateClicks = __bind(this._updateClicks, this);
+      this._addClick = __bind(this._addClick, this);
       this._repaint = __bind(this._repaint, this);
+      this._render = __bind(this._render, this);
+      this._handleServerMessage = __bind(this._handleServerMessage, this);
       this.runTest = __bind(this.runTest, this);
       this.recordTest = __bind(this.recordTest, this);
       var _this = this;
       this.options = $.extend({}, this.defaults, options);
+      this.clickData = [];
       this.$logEl = $('#log-output');
       this.$canvas = $('#phantom-canvas');
       this.canvasCtx = this.$canvas[0].getContext('2d');
       this.fayeClient = new Faye.Client(this.options.fayeUri);
-      this.fayeClient.subscribe(this.options.serverChannel, this._repaint);
+      this.fayeClient.subscribe(this.options.serverChannel, this._handleServerMessage);
       $('#test-input').on('keydown keypress keyup', function(e) {
         console.log('Key event: ', e);
         return _this._log('<div>Test Key input event: ' + e.type + ' ' + e.which + '</div>');
@@ -69,15 +75,69 @@
       });
     };
 
+    SmartTest.prototype._handleServerMessage = function(message) {
+      console.log('Received server message: ', message);
+      switch (message.type) {
+        case 'repaint':
+          return this._repaint(message);
+        case 'clickComponents':
+          return this._clickComponents(message);
+        default:
+          return console.log('Unexpected server message: ', message);
+      }
+    };
+
+    SmartTest.prototype._render = function() {
+      var _this = this;
+      this.canvasCtx.clearRect(0, 0, this.options.viewportWidth, this.options.viewportHeight);
+      if (this.image) this.canvasCtx.drawImage(this.image, 0, 0);
+      if (this.clickData.length > 0) {
+        return $.each(this.clickData, function(i, click) {
+          _this.canvasCtx.beginPath();
+          _this.canvasCtx.arc(click.x, click.y, click.radius, 0, 2 * Math.PI, false);
+          _this.canvasCtx.fillStyle = "rgba(255, 0, 0, " + click.alpha + ")";
+          return _this.canvasCtx.fill();
+        });
+      }
+    };
+
     SmartTest.prototype._repaint = function(message) {
       var image,
         _this = this;
       image = new Image();
       image.onload = function() {
-        _this.canvasCtx.clearRect(0, 0, _this.options.viewportWidth, _this.options.viewportHeight);
-        return _this.canvasCtx.drawImage(image, 0, 0);
+        _this.image = image;
+        return _this._render();
       };
       return image.src = message.image;
+    };
+
+    SmartTest.prototype._addClick = function(x, y) {
+      this.clickData.push({
+        alpha: 1.0,
+        radius: 1,
+        x: x,
+        y: y
+      });
+      this._render();
+      if (this.clickData.length === 1) return setTimeout(this._updateClicks, 25);
+    };
+
+    SmartTest.prototype._updateClicks = function() {
+      var _this = this;
+      $.each(this.clickData, function(i, click) {
+        click.alpha -= 0.05;
+        return click.radius += 1;
+      });
+      if (this.clickData[0].alpha <= 0.0) this.clickData.shift();
+      this._render();
+      if (this.clickData.length > 0) return setTimeout(this._updateClicks, 25);
+    };
+
+    SmartTest.prototype._clickComponents = function(message) {
+      $('.test-steps-container').append("<div><strong>clickSelector:</strong>" + message.selector + "</div>");
+      $('.test-steps-container').append("<div><strong>clickElementContainingText:</strong>" + message.text + "</div>");
+      return $('.test-steps-container').append("<div><strong>clickCoordinates:</strong>" + (JSON.stringify(message.position)) + "</div>");
     };
 
     SmartTest.prototype._bindRecordEvents = function() {
@@ -109,7 +169,8 @@
             y: e.offsetY
           }
         };
-        return _this._publishRecordMessage(message);
+        _this._publishRecordMessage(message);
+        return _this._addClick(e.offsetX, e.offsetY);
       });
       return $(document).on('keydown keypress keyup', function(e) {
         var keyInfo;

@@ -6,9 +6,11 @@ var webpage = require('webpage'),
 phantom.injectJs('faye.js');
 phantom.injectJs('jquery-1.9.1.min.js');
 phantom.injectJs('key_code_translator.js');
+phantom.injectJs('element_analyzer.js');
 
 var fayeClient = new Faye.Client('http://localhost:9292/faye');
 var keyTranslator = new KeyCodeTranslator();
+var elementAnalyzer = new ElementAnalyzer();
 
 function receiveMessage(message) {
   console.log('Message received: ' + JSON.stringify(message));
@@ -52,6 +54,10 @@ function receiveMessage(message) {
       });
       break;
     case 'click':
+      var components = elementAnalyzer.getElementComponents(page, message.position.x, message.position.y);
+      components.type = 'clickComponents';
+      console.log('Sending message: ' + JSON.stringify(components));
+      fayeClient.publish('/server', components);
       page.sendEvent('click', message.position.x, message.position.y);
       break;
     case 'keydown':
@@ -78,7 +84,7 @@ function sendRenderUpdate() {
       var newImage = 'data:image/jpeg;base64,' + page.renderBase64('JPEG');
       if (image != newImage) {
         image = newImage;
-        var publication = fayeClient.publish('/server', {image: image});
+        var publication = fayeClient.publish('/server', {type: 'repaint', image: image});
 
         publication.callback(function() {
           console.log('Message received by server!');
@@ -125,5 +131,8 @@ function bindPageEvents() {
   page.onLoadFinished = function(status) {
     console.log('onLoadFinished: ' + status);
     loading = false;
+  }
+  page.onConsoleMessage = function(msg, lineNum, sourceId) {
+    console.log('CONSOLE: ' + msg + ' (from line #' + lineNum + ' in "' + sourceId + '")');
   }
 }
