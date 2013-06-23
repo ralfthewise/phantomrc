@@ -5,7 +5,7 @@
   SmartTest = (function() {
 
     SmartTest.prototype.defaults = {
-      fayeUri: 'http://192.168.10.10:9292/faye',
+      fayeUri: 'http://adams.datastarved.net:9292/faye',
       clientChannel: '/client',
       serverChannel: '/server',
       verbose: true,
@@ -19,6 +19,7 @@
       this._addClick = __bind(this._addClick, this);
       this._repaint = __bind(this._repaint, this);
       this._render = __bind(this._render, this);
+      this._showLoading = __bind(this._showLoading, this);
       this._handleServerMessage = __bind(this._handleServerMessage, this);
       this.runTest = __bind(this.runTest, this);
       this.recordTest = __bind(this.recordTest, this);
@@ -26,8 +27,21 @@
       this.options = $.extend({}, this.defaults, options);
       this.clickData = [];
       this.$logEl = $('#log-output');
-      this.$canvas = $('#phantom-canvas');
-      this.canvasCtx = this.$canvas[0].getContext('2d');
+      this.$phantomCanvas = $('#phantom-canvas');
+      this.phantomCanvasCtx = this.$phantomCanvas[0].getContext('2d');
+      this.$overlayCanvas = $('#overlay-canvas');
+      this.overlayCanvasCtx = this.$overlayCanvas[0].getContext('2d');
+      this.$loadingContainer = $('.canvas-container .loading-container');
+      this.spinner = Spinners.create('.canvas-container .loading-container .loading', {
+        radius: 50,
+        height: 29,
+        width: 2.5,
+        dashes: 30,
+        opacity: 1,
+        padding: 3,
+        rotation: 1500,
+        color: '#000000'
+      });
       this.fayeClient = new Faye.Client(this.options.fayeUri);
       this.fayeClient.subscribe(this.options.serverChannel, this._handleServerMessage);
       $('#test-input').on('keydown keypress keyup', function(e) {
@@ -43,13 +57,19 @@
     SmartTest.prototype.recordTest = function() {
       var uri;
       this._clearLog();
-      this.$canvas.prop('width', this.options.viewportWidth).prop('height', this.options.viewportHeight);
+      $('.viewport-resize').prop('width', this.options.viewportWidth).prop('height', this.options.viewportHeight);
+      $('.viewport-resize').css({
+        width: this.options.viewportWidth,
+        height: this.options.viewportHeight
+      });
+      this.spinner.center();
+      this._showLoading(true);
       this._log('Recording new test');
       this.testEvents = [];
       this._publishMessage({
         type: 'startRecord'
       });
-      this._publishMessage({
+      this._publishRecordMessage({
         type: 'setViewport',
         viewportTop: 0,
         viewportLeft: 0,
@@ -82,21 +102,32 @@
           return this._repaint(message);
         case 'clickComponents':
           return this._clickComponents(message);
+        case 'loading':
+          return this._showLoading(message.state);
         default:
           return console.log('Unexpected server message: ', message);
       }
     };
 
+    SmartTest.prototype._showLoading = function(state) {
+      if (state) {
+        this.spinner.play();
+        return this.$loadingContainer.show();
+      } else {
+        this.$loadingContainer.hide();
+        return this.spinner.stop();
+      }
+    };
+
     SmartTest.prototype._render = function() {
       var _this = this;
-      this.canvasCtx.clearRect(0, 0, this.options.viewportWidth, this.options.viewportHeight);
-      if (this.image) this.canvasCtx.drawImage(this.image, 0, 0);
+      this.overlayCanvasCtx.clearRect(0, 0, this.options.viewportWidth, this.options.viewportHeight);
       if (this.clickData.length > 0) {
         return $.each(this.clickData, function(i, click) {
-          _this.canvasCtx.beginPath();
-          _this.canvasCtx.arc(click.x, click.y, click.radius, 0, 2 * Math.PI, false);
-          _this.canvasCtx.fillStyle = "rgba(255, 0, 0, " + click.alpha + ")";
-          return _this.canvasCtx.fill();
+          _this.overlayCanvasCtx.beginPath();
+          _this.overlayCanvasCtx.arc(click.x, click.y, click.radius, 0, 2 * Math.PI, false);
+          _this.overlayCanvasCtx.fillStyle = "rgba(255, 0, 0, " + click.alpha + ")";
+          return _this.overlayCanvasCtx.fill();
         });
       }
     };
@@ -160,7 +191,7 @@
           type: 'stopRecord'
         });
       });
-      $('#phantom-canvas').on('click', function(e) {
+      this.$overlayCanvas.on('click', function(e) {
         var message;
         message = {
           type: e.type,
@@ -191,7 +222,7 @@
 
     SmartTest.prototype._unbindRecordEvents = function() {
       $(document).off('keydown keypress keyup');
-      $('#phantom-canvas').off('click');
+      this.$overlayCanvas.off('click');
       $('#stop-record').off('click');
       $('#start-record').prop('disabled', false);
       $('#start-record').on('click', this.recordTest);

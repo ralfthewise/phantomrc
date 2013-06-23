@@ -8,7 +8,9 @@
     <script src="http://cdn.jsdelivr.net/jquery.cookie/1.3.1/jquery.cookie.js"></script>
     <script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.0/js/bootstrap.min.js"></script>
     <script src="/faye.js" type="text/javascript"></script>
+    <script src="spinners.min.js" type="text/javascript"></script>
     <script src="index.js"></script>
+    <script src="include/util.js"></script>
 
     <script>
       $(window).load(function() {
@@ -25,13 +27,74 @@
     <button id="stop-record" class="btn">Stop Recording</button>
     <button id="run-test" class="btn">Run Test</button>
     <div class="main-container clearfix">
-      <div class="canvas-container">
-        <canvas id="phantom-canvas"></canvas>
+      <div class="canvas-container viewport-resize">
+        <canvas id="phantom-canvas" class="viewport-resize"></canvas>
+        <canvas id="overlay-canvas" class="viewport-resize"></canvas>
+        <div class="loading-container viewport-resize">
+          <div class="loading"></div>
+        </div>
       </div>
       <div class="test-steps-container well"></div>
     </div>
     <input type="text" id="test-input"/>
     <div id="log-output"></div>
+
+    <script>
+      "use strict";
+      // Load supporting scripts
+      Util.load_scripts(["webutil.js", "base64.js", "websock.js", "des.js",
+      "input.js", "display.js", "jsunzip.js", "rfb.js"]);
+
+      var rfb;
+
+      function updateState(rfb, state, oldstate, msg) {
+        console.log('updateState: ', state, oldstate, msg);
+      }
+
+      window.onscriptsload = function () {
+        var host, port, password, path, token;
+
+        WebUtil.init_logging(WebUtil.getQueryVar('logging', 'warn'));
+        document.title = unescape(WebUtil.getQueryVar('title', 'noVNC'));
+        // By default, use the host and port of server that served this file
+        host = WebUtil.getQueryVar('host', 'adams.datastarved.net');
+        port = WebUtil.getQueryVar('port', 15900);
+
+        // if port == 80 (or 443) then it won't be present and should be
+        // set manually
+        if (!port) {
+          if (window.location.protocol.substring(0,4) == 'http') {
+            port = 80;
+          }
+          else if (window.location.protocol.substring(0,5) == 'https') {
+            port = 443;
+          }
+        }
+
+        // If a token variable is passed in, set the parameter in a cookie.
+        // This is used by nova-novncproxy.
+        token = WebUtil.getQueryVar('token', null);
+        if (token) {
+          WebUtil.createCookie('token', token, 1)
+        }
+
+        password = WebUtil.getQueryVar('password', 'vncrul3Z');
+        path = WebUtil.getQueryVar('path', '5901');
+
+        rfb = new RFB({
+          'target':       $D('phantom-canvas'),
+          'encrypt':      WebUtil.getQueryVar('encrypt', (window.location.protocol === "https:")),
+          'repeaterID':   WebUtil.getQueryVar('repeaterID', ''),
+          'true_color':   WebUtil.getQueryVar('true_color', true),
+          'local_cursor': WebUtil.getQueryVar('cursor', true),
+          'shared':       WebUtil.getQueryVar('shared', true),
+          'view_only':    WebUtil.getQueryVar('view_only', true),
+          'updateState':  updateState});
+        rfb.connect(host, port, password, path);
+        rfb.get_keyboard().set_focused(false);
+        rfb.get_mouse().set_focused(false);
+      };
+    </script>
   </body>
 </html>
 

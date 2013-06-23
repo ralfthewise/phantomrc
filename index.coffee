@@ -1,6 +1,6 @@
 class SmartTest
   defaults:
-    fayeUri: 'http://192.168.10.10:9292/faye'
+    fayeUri: 'http://adams.datastarved.net:9292/faye'
     clientChannel: '/client'
     serverChannel: '/server'
     verbose: true
@@ -12,8 +12,21 @@ class SmartTest
 
     @clickData = []
     @$logEl = $('#log-output')
-    @$canvas = $('#phantom-canvas')
-    @canvasCtx = @$canvas[0].getContext('2d')
+    @$phantomCanvas = $('#phantom-canvas')
+    @phantomCanvasCtx = @$phantomCanvas[0].getContext('2d')
+    @$overlayCanvas = $('#overlay-canvas')
+    @overlayCanvasCtx = @$overlayCanvas[0].getContext('2d')
+    @$loadingContainer = $('.canvas-container .loading-container')
+    @spinner = Spinners.create('.canvas-container .loading-container .loading'
+      radius: 50
+      height: 29
+      width: 2.5
+      dashes: 30
+      opacity: 1
+      padding: 3
+      rotation: 1500
+      color: '#000000'
+    )
     @fayeClient = new Faye.Client(@options.fayeUri)
     @fayeClient.subscribe(@options.serverChannel, @_handleServerMessage)
 
@@ -27,12 +40,16 @@ class SmartTest
 
   recordTest: () =>
     @_clearLog()
-    @$canvas.prop('width', @options.viewportWidth).prop('height', @options.viewportHeight)
+    $('.viewport-resize').prop('width', @options.viewportWidth).prop('height', @options.viewportHeight)
+    $('.viewport-resize').css({width: @options.viewportWidth, height: @options.viewportHeight})
+    @spinner.center()
+    @_showLoading(true)
+
     @_log('Recording new test')
     @testEvents = []
 
     @_publishMessage({type: 'startRecord'})
-    @_publishMessage({type: 'setViewport', viewportTop: 0, viewportLeft: 0, viewportWidth: @options.viewportWidth, viewportHeight: @options.viewportHeight})
+    @_publishRecordMessage({type: 'setViewport', viewportTop: 0, viewportLeft: 0, viewportWidth: @options.viewportWidth, viewportHeight: @options.viewportHeight})
     uri = $('#uri').val()
     @_publishRecordMessage({type: 'goto', uri: uri}) if (uri? and uri isnt '')
     @_bindRecordEvents()
@@ -47,17 +64,27 @@ class SmartTest
     switch message.type
       when 'repaint' then @_repaint(message)
       when 'clickComponents' then @_clickComponents(message)
+      when 'loading' then @_showLoading(message.state)
       else console.log('Unexpected server message: ', message)
 
+  _showLoading: (state) =>
+    if state
+      @spinner.play()
+      @$loadingContainer.show()
+    else
+      @$loadingContainer.hide()
+      @spinner.stop()
+
   _render: () =>
-    @canvasCtx.clearRect(0, 0, @options.viewportWidth, @options.viewportHeight)
-    @canvasCtx.drawImage(@image, 0, 0) if @image
+    #@phantomCanvasCtx.clearRect(0, 0, @options.viewportWidth, @options.viewportHeight)
+    #@phantomCanvasCtx.drawImage(@image, 0, 0) if @image
+    @overlayCanvasCtx.clearRect(0, 0, @options.viewportWidth, @options.viewportHeight)
     if @clickData.length > 0
       $.each(@clickData, (i, click) =>
-        @canvasCtx.beginPath()
-        @canvasCtx.arc(click.x, click.y, click.radius, 0, 2 * Math.PI, false)
-        @canvasCtx.fillStyle = "rgba(255, 0, 0, #{click.alpha})"
-        @canvasCtx.fill()
+        @overlayCanvasCtx.beginPath()
+        @overlayCanvasCtx.arc(click.x, click.y, click.radius, 0, 2 * Math.PI, false)
+        @overlayCanvasCtx.fillStyle = "rgba(255, 0, 0, #{click.alpha})"
+        @overlayCanvasCtx.fill()
       )
 
   _repaint: (message) =>
@@ -98,7 +125,7 @@ class SmartTest
       @_publishMessage({type: 'stopRecord'})
     )
 
-    $('#phantom-canvas').on('click', (e) =>
+    @$overlayCanvas.on('click', (e) =>
       message = {type: e.type, position: {x: e.offsetX, y:e.offsetY}}
       @_publishRecordMessage(message)
       @_addClick(e.offsetX, e.offsetY)
@@ -117,7 +144,7 @@ class SmartTest
 
   _unbindRecordEvents: () ->
     $(document).off('keydown keypress keyup')
-    $('#phantom-canvas').off('click')
+    @$overlayCanvas.off('click')
     $('#stop-record').off('click')
     $('#start-record').prop('disabled', false)
     $('#start-record').on('click', @recordTest)

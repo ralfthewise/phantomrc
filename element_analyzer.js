@@ -14,10 +14,13 @@
       components = page.evaluate(function(x, y) {
         var chainStart, clickEl, getChainStart, getSelectorChain, getSelectorFromEl, position, selector, text;
         clickEl = document.elementFromPoint(x, y);
+        console.log('clickEl: ', clickEl);
         getChainStart = function(el, stopEl) {
           var tmpEl;
           tmpEl = el;
-          while (tmpEl.parentNode !== stopEl) {
+          console.log('tmpEl: ', tmpEl);
+          while (tmpEl !== stopEl && (tmpEl.parentNode != null)) {
+            console.log('tmpEl: ', tmpEl, tmpEl.parentNode);
             if (tmpEl.id) return tmpEl;
             tmpEl = tmpEl.parentNode;
           }
@@ -35,6 +38,7 @@
         };
         getSelectorChain = function(el, stopEl) {
           var elementChain, tmpEl;
+          console.log('getSelectorChain: ', el, stopEl);
           elementChain = [];
           tmpEl = el;
           while (tmpEl !== stopEl) {
@@ -45,6 +49,7 @@
           return elementChain.join(' ');
         };
         chainStart = getChainStart(clickEl, document.documentElement);
+        console.log('here');
         if ((chainStart.id != null) && chainStart === clickEl) {
           selector = "#" + chainStart.id;
         } else {

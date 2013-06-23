@@ -2,11 +2,14 @@ class ElementAnalyzer
   getElementComponents: (page, x, y) =>
     components = page.evaluate((x, y) =>
       clickEl = document.elementFromPoint(x, y)
+      console.log('clickEl: ', clickEl)
 
       #get first element in ancestor chain up to 'stopEl' (including self) that has an ID, or stopEl if none have an ID
       getChainStart = (el, stopEl) ->
         tmpEl = el
-        while (tmpEl.parentNode isnt stopEl)
+        console.log('tmpEl: ', tmpEl)
+        while (tmpEl isnt stopEl and tmpEl.parentNode?)
+          console.log('tmpEl: ', tmpEl, tmpEl.parentNode)
           return tmpEl if tmpEl.id
           tmpEl = tmpEl.parentNode
         return tmpEl
@@ -21,6 +24,7 @@ class ElementAnalyzer
 
       #get css selector from stopEl to el
       getSelectorChain = (el, stopEl) ->
+        console.log('getSelectorChain: ', el, stopEl)
         elementChain = []
         tmpEl = el
         while (tmpEl isnt stopEl)
@@ -30,6 +34,7 @@ class ElementAnalyzer
         return elementChain.join(' ')
 
       chainStart = getChainStart(clickEl, document.documentElement)
+      console.log('here')
       if (chainStart.id? and chainStart is clickEl)
         selector = "##{chainStart.id}"
       else

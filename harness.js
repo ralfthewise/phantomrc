@@ -54,6 +54,7 @@ function receiveMessage(message) {
       });
       break;
     case 'click':
+      console.log('Click event: ' + JSON.stringify(message));
       var components = elementAnalyzer.getElementComponents(page, message.position.x, message.position.y);
       components.type = 'clickComponents';
       console.log('Sending message: ' + JSON.stringify(components));
@@ -84,15 +85,7 @@ function sendRenderUpdate() {
       var newImage = 'data:image/jpeg;base64,' + page.renderBase64('JPEG');
       if (image != newImage) {
         image = newImage;
-        var publication = fayeClient.publish('/server', {type: 'repaint', image: image});
-
-        publication.callback(function() {
-          console.log('Message received by server!');
-        });
-
-        publication.errback(function(error) {
-          console.log('There was a problem: ' + error.message);
-        });
+        page.render('/tmp/phantomrc/' + Math.round(Math.random() * 100000) + '.png');
       }
     }
 
@@ -127,10 +120,12 @@ function bindPageEvents() {
   page.onLoadStarted = function(status) {
     console.log('onLoadStarted');
     loading = true;
+    fayeClient.publish('/server', {type: 'loading', state: true});
   }
   page.onLoadFinished = function(status) {
     console.log('onLoadFinished: ' + status);
     loading = false;
+    fayeClient.publish('/server', {type: 'loading', state: false});
   }
   page.onConsoleMessage = function(msg, lineNum, sourceId) {
     console.log('CONSOLE: ' + msg + ' (from line #' + lineNum + ' in "' + sourceId + '")');
