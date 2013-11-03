@@ -1,6 +1,6 @@
 class SmartTest
   defaults:
-    fayeUri: 'http://adams.datastarved.net:9292/faye'
+    fayeUri: 'http://localhost:9292/faye'
     clientChannel: '/client'
     serverChannel: '/server'
     verbose: true
