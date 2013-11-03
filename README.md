@@ -4,8 +4,8 @@ phantomrc
 PhantomJS Remote Control
 
     mkdir -p /tmp/phantomrc && rm -f /tmp/phantomrc/*
-    phantomjs harness.js &
     bundle exec rackup config.ru -s thin -E production &
+    phantomjs harness.js &
 
     #download noVNC and in that directory run:
     ./utils/launch.sh --vnc localhost:5900
