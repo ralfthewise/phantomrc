@@ -57,8 +57,8 @@
         WebUtil.init_logging(WebUtil.getQueryVar('logging', 'warn'));
         document.title = unescape(WebUtil.getQueryVar('title', 'noVNC'));
         // By default, use the host and port of server that served this file
-        host = WebUtil.getQueryVar('host', 'adams.datastarved.net');
-        port = WebUtil.getQueryVar('port', 15900);
+        host = WebUtil.getQueryVar('host', 'localhost');
+        port = WebUtil.getQueryVar('port', 6080);
 
         // if port == 80 (or 443) then it won't be present and should be
         // set manually
@@ -78,8 +78,8 @@
           WebUtil.createCookie('token', token, 1)
         }
 
-        password = WebUtil.getQueryVar('password', 'vncrul3Z');
-        path = WebUtil.getQueryVar('path', '5901');
+        //password = WebUtil.getQueryVar('password', 'password');
+        //path = WebUtil.getQueryVar('path', '5901');
 
         rfb = new RFB({
           'target':       $D('phantom-canvas'),
