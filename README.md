@@ -3,6 +3,7 @@ phantomrc
 
 PhantomJS Remote Control
 
+mkdir -p /tmp/phantomrc && rm -f /tmp/phantomrc/*
 phantomjs harness.js &
 bundle exec rackup config.ru -s thin -E production &
 
@@ -10,7 +11,6 @@ bundle exec rackup config.ru -s thin -E production &
 ./utils/launch.sh --vnc localhost:5900
 
 #checkout git@github.com:ralfthewise/phantomvnc.gi, build it according to the README, and then run:
-mkdir -p /tmp/phantomrc && rm -f /tmp/phantomrc/*
 ./src/phantomvnc /tmp/phantomrc
 
 #then visit http://localhost:9292/test/index.html
